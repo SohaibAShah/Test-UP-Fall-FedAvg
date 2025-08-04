@@ -1,4 +1,6 @@
+
 import os
+import pickle
 import numpy as np
 import pandas as pd
 from pyts.image import GramianAngularField
@@ -49,6 +51,7 @@ def process_sensor_data(sensor_path):
     GAF_data = {}
     
     for key, value in S_A_T:
+                
         value = value.iloc[0:140, :]  # Limit to 140 time steps
         gaf = GramianAngularField(method='difference')
         
@@ -115,5 +118,10 @@ def process_sensor_data(sensor_path):
             'GAF_Wrist': gaf_Wrist
         }
         GAF_data[key] = each_gaf
+
+        # Save GAF data to a pickle file
+        print(f"Processed GAF for Subject {int(key[0])}, Activity {int(key[1])}, Trial {int(key[2])}")
+    with open(os.path.join(sensor_path, 'GAF_sensor_data.pkl'), 'wb') as f:
+        pickle.dump(GAF_data, f)
     
     return GAF_data

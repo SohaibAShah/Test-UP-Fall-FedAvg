@@ -6,19 +6,28 @@ import imageio
 from zipfile import ZipFile
 import shutil
 from utils import re_value
+import pickle
 
-def process_camera_data(camera_zip_path, temp_camera_path):
+def process_camera_data(camera_zip_path, temp_camera_path, output_dir='dataset'):
     """Process camera data from zip files and compute average difference images.
     
     Args:
         camera_zip_path (str): Path to directory containing zip files.
         temp_camera_path (str): Path for temporary extracted images.
-        nan_index_path (str): Path to Nan_index.npy for problematic images.
     
     Returns:
         dict: Camera_data with keys (Subject, Activity, Trial) and values as processed images.
     """
-        
+
+    camera_data_path = os.path.join(temp_camera_path, 'Camera_data.pkl')
+    # Check for existing Camera_data.pkl
+    if os.path.exists(camera_data_path):
+        print(f"Loading Camera data from {camera_data_path}...")
+        with open(camera_data_path, 'rb') as f:
+            Camera_data = pickle.load(f)
+        return Camera_data
+    
+    count = 0
     Camera_data = {}
     
     # Iterate over subjects, activities, trials, and cameras
@@ -55,7 +64,10 @@ def process_camera_data(camera_zip_path, temp_camera_path):
                         for filename in sorted(filenames):  # Sort for chronological order
                             if re.search(r"\.(jpg|jpeg|png|bmp|tiff)$", filename, re.IGNORECASE):
                                 photos_filenames.append(os.path.join(root, filename))
-                    
+                                count += 1
+                                if count % 5000 == 0:
+                                    print('{} : {}'.format(os.path.join(root, filename), count))
+
                     # Limit to 140 images
                     for j in range(min(140, len(photos_filenames))):
                         try:
@@ -71,8 +83,8 @@ def process_camera_data(camera_zip_path, temp_camera_path):
                     if len(all_gray_img) > 1:
                         delt_list = []
                         for k in range(len(all_gray_img) - 1):
-                            delt = np.abs(np.array(all_gray_img[k + 1]).astype(np.int) - 
-                                         np.array(all_gray_img[k]).astype(np.int))
+                            delt = np.abs(np.array(all_gray_img[k + 1]).astype(np.int64) - 
+                                         np.array(all_gray_img[k]).astype(np.int64))
                             delt_list.append(delt)
                         if delt_list:
                             delt_gray_arr = sum(delt_list) / len(delt_list)  # Average difference
@@ -81,5 +93,11 @@ def process_camera_data(camera_zip_path, temp_camera_path):
                     
                     # Clean up extracted directory
                     shutil.rmtree(extract_dir, ignore_errors=True)
-    
+    # Save Camera_data
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(camera_data_path, 'wb') as f:
+        pickle.dump(Camera_data, f)
+    print(f"Saved Camera data to {camera_data_path}")
+
     return Camera_data

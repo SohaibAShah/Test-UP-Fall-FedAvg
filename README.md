@@ -7,8 +7,7 @@ dataset/
 │   ├── Subject1Activity1Trial1Camera1.zip
 │   ├── Subject1Activity1Trial1Camera2.zip
 │   ├── ...
-├── camera/  # Temporary directory for extracted images (created/deleted during processing)
-├── Train_data.pkl
+├── camera/
 ├── Test_data.pkl
 ├
 fall_detection_preprocessing/

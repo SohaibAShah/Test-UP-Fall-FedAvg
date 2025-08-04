@@ -24,7 +24,7 @@ class MyModel(nn.Module):
         self.bn3 = nn.BatchNorm2d(12)
 
         self.flatten = nn.Flatten()
-        self.fc1 = nn.Linear(588, 11)  # 11 classes for activities 1-11
+        self.fc1 = nn.Linear(2700, 11)  # 11 classes for activities 1-11
         
     def forward(self, x):
         x = self.conv1(x)

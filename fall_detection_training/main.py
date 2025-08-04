@@ -9,8 +9,8 @@ from evaluate import evaluate_model
 
 def main():
     # Configuration
-    train_data_path = 'FL-FD/Train_data.pkl'
-    test_data_path = 'FL-FD/Test_data.pkl'
+    train_data_path = 'dataset/Train.pkl'
+    test_data_path = 'dataset/Test.pkl'
     num_epochs = 200
     total_clients = 15
     num_clients_per_round = 12
@@ -22,14 +22,30 @@ def main():
     train_data = pickle.load(open(train_data_path, 'rb'))
     test_data = pickle.load(open(test_data_path, 'rb'))
     
-    # Prepare datasets
-    train_inputs = [data[0] for data in train_data.values()]  # Assuming data is [inputs, label]
-    train_labels = [data[-1] for data in train_data.values()]
-    test_inputs = [data[0] for data in test_data.values()]
-    test_labels = [data[-1] for data in test_data.values()]
+    # Prepare datasets (flatten sensor data)
+    train_inputs = []
+    train_labels = []
+    test_inputs = []
+    test_labels = []
+    
+    for key, data in train_data.items():
+        for sensor_data in data[:-1]:  # Exclude label (last element)
+            train_inputs.append(sensor_data)  # 3x140x140
+            train_labels.append(data[-1])     # Label
+    for key, data in test_data.items():
+        for sensor_data in data[:-1]:  # Exclude label
+            test_inputs.append(sensor_data)   # 3x140x140
+            test_labels.append(data[-1])      # Label
     
     train_dataset = MyDataset(train_inputs, train_labels)
     test_dataset = MyDataset(test_inputs, test_labels)
+    
+    # Verify dataset sizes
+    print(f"Training combinations: {len(train_data)}")  # Expected: 329
+    print(f"Test combinations: {len(test_data)}")      # Expected: 164
+    print(f"Training samples (flattened): {len(train_dataset)}")  # Expected: 1645
+    print(f"Test samples (flattened): {len(test_dataset)}")      # Expected: 820
+    print(f"Sample shape: {train_dataset[0][0].shape}")          # Expected: (3, 140, 140)
     
     # Initialize model
     print("Initializing model...")
@@ -42,9 +58,18 @@ def main():
     print("Initializing server and clients...")
     server = Server(model, test_dataset, num_clients_per_round)
     clients = []
-    for c in range(total_clients):
-        client_dataset = MyDataset([train_data[list(train_data.keys())[c]][0]], 
-                                 [train_data[list(train_data.keys())[c]][-1]])
+    # Distribute data across clients (by subject)
+    subject_keys = {i: [] for i in range(1, 18) if i not in [5, 9]}
+    for key in train_data.keys():
+        subject = key[0]
+        if subject in subject_keys:
+            for sensor_data in train_data[key][:-1]:  # Each sensor
+                subject_keys[subject].append((sensor_data, train_data[key][-1]))
+    
+    for c, (subject, data) in enumerate(subject_keys.items()):
+        client_inputs = [d[0] for d in data]
+        client_labels = [d[1] for d in data]
+        client_dataset = MyDataset(client_inputs, client_labels)
         clients.append(Client(model, {c: client_dataset}, id=c))
     
     # Train

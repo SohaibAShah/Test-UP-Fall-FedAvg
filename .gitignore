@@ -12,9 +12,17 @@ build/
 develop-eggs/
 dist/
 downloads/
+dataset/
+dataset/*.pkl
+*.pth
+dataset/GAF_sensor_data.pkl
+dataset/
+CompleteDataSet.csv
+camera/
 eggs/
 .eggs/
 lib/
+visualizations/
 lib64/
 parts/
 sdist/
